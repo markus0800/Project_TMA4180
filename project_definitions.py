@@ -397,70 +397,7 @@ def weak_wolfe(f, gradient_f, X, p_k, *args, alpha_0  =  1, c_1 = 1e-4, c_2 = 0.
             return alpha, iter
     return alpha, iter
 
-def strong_wolfe(f, gradient_f, X, p_k, *args, alpha_0  =  1, c_1 = 1e-3, c_2 = 0.9):
-    """
-    function that computes a steplength for the strong Wolfe conditions
-    input:
-        - f: function we optimize
-        - gradient_f: gradient of f
-        - X: matrix of nodes and their positions
-        - p_k: search direction
-        - *args: arguments used in f and gradient_f
-        - alpha_0: first steplength 
-        - c_1,c_2: paramter for computing the armijo condition 
-    output:
-        alpha: steplength 
-        iter: number of iterations
-    """
-    alpha_max = np.inf
-    alpha_min = 0
-    alpha = alpha_0
-    iter = 0 
-    D,N = np.shape(X)
-    M = D*N
-    f_call = f(X, *args)
-    gradient = gradient_f(X, *args)
-    dot_call = np.dot(np.reshape(gradient, M), np.reshape(p_k, M))
-    armijo_cond = False
-    curvature_high = False
-    curvature_low = False
-
-    while(iter < 100):
-        iter +=1   
-        if(f(X + alpha * p_k, *args) > (f_call + c_1 * alpha * dot_call)):
-            alpha_max = alpha
-            alpha = (alpha_max +  alpha_min)/2
-            armijo_cond = False
-        else:
-            armijo_cond = True
-            
-        if(np.dot(np.reshape(p_k, M), np.reshape(gradient_f(X + alpha * p_k, *args),M)) < (c_2 * dot_call)):
-            alpha_min = alpha
-            if(alpha_max == np.inf):
-                alpha = 2*alpha
-            else:
-                alpha = (alpha_max + alpha_min)/2
-            curvature_low = False
-        else:
-            curvature_low = True
-        
-        if(np.dot(np.reshape(p_k, M), np.reshape(gradient_f(X + alpha * p_k, *args),M)) > -(c_2 * dot_call)):
-            alpha_min = alpha    
-            if(alpha_max == np.inf):
-                alpha = 2*alpha
-            else:
-                alpha = (alpha_max + alpha_min)/2
-            curvature_high = False
-        else:
-            curvature_high = True
-        
-        if(armijo_cond and curvature_high and curvature_low):
-            return alpha, iter 
-        
-    return alpha, iter
-
-
-def alt_strong_wolfe(f, gradient_f, X, p_k, *args, alpha_0  =  2, c_1 = 1e-3, c_2 = 0.9):
+def strong_wolfe(f, gradient_f, X, p_k, *args, alpha_0  =  2, c_1 = 1e-3, c_2 = 0.9):
     alpha_max = alpha_0
     alpha_min = 0.0
     iter = 0 
@@ -501,7 +438,7 @@ def alt_strong_wolfe(f, gradient_f, X, p_k, *args, alpha_0  =  2, c_1 = 1e-3, c_
     return alpha, tot_iter
 
 
-def gradient_descent(f, gradient_f, X, *args, tol = 1e-8, alpha_0 = 1, armijo = False, weak_w = False, strong_w = False, alt_strong_w = False ):
+def gradient_descent(f, gradient_f, X, *args, tol = 1e-8, alpha_0 = 1, armijo = False, weak_w = False, strong_w = False):
     """
     function that does gradient descent with either armijo, weak wolfe or strong wolfe conditions or constant step size 
     input:
@@ -536,10 +473,6 @@ def gradient_descent(f, gradient_f, X, *args, tol = 1e-8, alpha_0 = 1, armijo = 
             p_k = p_k
             alpha, q  = strong_wolfe(f, gradient_f, X, p_k, *args) 
             Q += q
-        elif(alt_strong_w):
-            p_k = p_k
-            alpha,q = alt_strong_wolfe(f, gradient_f, X, p_k, *args)
-            Q += q
         else:
             alpha = 1
         error.append(np.linalg.norm(np.reshape(gradient_f(X, *args),M)))
@@ -548,62 +481,8 @@ def gradient_descent(f, gradient_f, X, *args, tol = 1e-8, alpha_0 = 1, armijo = 
     print(f'number of gradient descent steps = {steps}, number of step size optimization = {Q}, norm of gradient = {np.linalg.norm(np.reshape(gradient_f(X, *args),M))}, Energy = {f(X, *args)}')
     return X, error
 
-def BFGS(f, gradient_f, X, *args, tol = 1e-8,  armijo = False, weak_w = False, strong_w = False, alt_strong_w = False ):
-    """
-    function that does quasi Newton (Broyden-Fletcher-Goldfarb-Shanno) algorithm with either armijo, weak wolfe or strong wolfe conditions or constant step size 
-    
-    input:
-        - E: function we optimize
-        - gradient_E: gradient of E
-        - X: matrix of nodes and their positions
-        - *args: arguments used in E and gradient_E
-        - armijo: bool operator that tells us if we are doing armijo search 
-        - weak_w: bool operator that tells us if we are doing weak wolfe search 
-        - strong_w: bool operator that tells us if we are doing strong wolfe search 
-    
-    output:
-        X: optimized position of nodes 
-    """
-    steps = 0
-    Q = 0 
-    d,N = np.shape(X)
-    M = d*N
-    B_k = np.identity(M)
-    error = []
-    while(np.linalg.norm(np.reshape(gradient_f(X, *args),M)) > tol and steps < 1000):
-        p_k = -np.linalg.solve(B_k, np.reshape(gradient_f(X, *args), M))
-        p_k = np.reshape(p_k, (d,N))
-        if(armijo):
-            step_size,q = armijo_step(f, gradient_f, X, p_k, *args)
-        elif(weak_w):
-            step_size,q = weak_wolfe(f, gradient_f, X, p_k, *args)
-        elif(strong_w):
-            step_size,q = strong_wolfe(f, gradient_f, X, p_k, *args)
-        elif(alt_strong_w):
-            step_size,q = alt_strong_wolfe(f, gradient_f, X, p_k, *args)
-        else:
-            step_size,q = (1,0)
-        s = step_size * p_k
-        y = gradient_f(X + s, *args) - gradient_f(X, *args)
-        y = np.reshape(y, M)
-        s = np.reshape(s, M)
-        if(np.dot(y,s) == 0 or np.dot(s, B_k@s) == 0):
-            print(f'stepsize = {step_size}, ||p_k|| = {np.linalg.norm(p_k)}')
-            print(f'||y|| = {np.linalg.norm(y)}, ||s|| = {np.linalg.norm(s)}, ||B_k @ s|| = {np.linalg.norm(B_k @s)} ')
-            print(f'y.T s  = {np.dot(y,s)}, s.T B_k s =  {np.dot(s, B_k@s)}')
-            break
-        alpha = 1/np.dot(y,s)
-        beta = -1/np.dot(s, B_k@s)
-        B_k += alpha*np.outer(y, y) + beta* np.outer(B_k@s,B_k@s)
-        X += step_size * p_k
-        steps +=1 
-        Q +=q
-        error.append(np.linalg.norm(np.reshape(gradient_f(X, *args),M)))
-    print(f'number of BFGS steps = {steps}, number of step size optimization = {Q}, norm of gradient = {np.linalg.norm(np.reshape(gradient_f(X, *args), M))}, Energy = {f(X, *args)}')
-    return X, error
 
-
-def BFGS2(f, gradient_f, X, *args, tol = 1e-10,  armijo = False, weak_w = False, strong_w = False, alt_strong_w = False):
+def BFGS(f, gradient_f, X, *args, tol = 1e-10,  armijo = False, weak_w = False, strong_w = False):
     """
     function that does quasi Newton (Broyden-Fletcher-Goldfarb-Shanno) algorithm with either armijo, weak wolfe or strong wolfe conditions or constant step size 
     
@@ -635,10 +514,6 @@ def BFGS2(f, gradient_f, X, *args, tol = 1e-10,  armijo = False, weak_w = False,
         elif(strong_w):
             step_size,q = strong_wolfe(f, gradient_f, X, p_k, *args)
 
-        elif(alt_strong_w):
-            p_k = p_k
-            step_size,q = alt_strong_wolfe(f, gradient_f, X, p_k, *args)
-            Q += q
         else:
             step_size,q = (1,0)
         s = step_size * p_k
