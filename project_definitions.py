@@ -32,8 +32,7 @@ def plot_cable_net(X,A,ax):
                 ax.scatter(x, y, z,  c='r', marker='o')
                 ax.plot(x,y,z, '--b', alpha = 0.5)
     ax.scatter(x, y, z,  c='r', marker='o', label = 'node')
-    ax.plot(x,y,z,'--b', label = 'cable', alpha = 0.5)
-    plt.legend(fontsize = 20)
+    ax.plot(x,y,z,'--b', label = 'cable', alpha = 0.5)  
 
 def plot_bar_net(X,B,ax):
     """ 
@@ -53,8 +52,8 @@ def plot_bar_net(X,B,ax):
                 y = [X[:,i][1], X[:,j][1]]
                 z = [X[:,i][2], X[:,j][2]]
                 ax.plot(x,y,z, c = 'g', linewidth = '2.0', alpha = 0.7)
+                ax.scatter(x, y, z,  c='r', marker='o')
     ax.plot(x,y,z, c = 'g', linewidth = '2.0', label = 'bar', alpha = 0.7)
-    plt.legend()
 
 def E_cable_elast_net(X, A, L, k):
     """
